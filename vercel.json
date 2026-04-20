@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "frontend/public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/auth/(.*)", "dest": "/api/index.py" },
+    { "src": "/expenses/(.*)", "dest": "/api/index.py" },
+    { "src": "/ml/(.*)", "dest": "/api/index.py" },
+    { "src": "/docs", "dest": "/api/index.py" },
+    { "src": "/openapi.json", "dest": "/api/index.py" },
+    { "src": "/", "dest": "/frontend/public/index.html" },
+    { "src": "/(.*)", "dest": "/frontend/public/$1" }
+  ]
+}
