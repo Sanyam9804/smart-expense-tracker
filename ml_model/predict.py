@@ -1,6 +1,7 @@
 import joblib
 import os
-import pandas as pd
+from datetime import datetime
+from collections import defaultdict
 from sklearn.linear_model import LinearRegression
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pkl")
@@ -14,63 +15,72 @@ class ExpenseML:
         if os.path.exists(MODEL_PATH):
             self.model = joblib.load(MODEL_PATH)
         else:
-            # If model doesn't exist to prevent crash
             self.model = None
             
     def predict_category(self, description: str) -> str:
         if self.model is None:
-            # Fallback
             return "Other"
         prediction = self.model.predict([description])
         return prediction[0]
         
-    def predict_next_month_spending(self, historical_data: pd.DataFrame):
-        # Expects dataframe with 'date' and 'amount'
-        if historical_data.empty or len(historical_data) < 2:
+    def predict_next_month_spending(self, historical_data: list):
+        if not historical_data or len(historical_data) < 2:
             return 0.0
             
-        # Group by month
-        historical_data['month'] = pd.to_datetime(historical_data['date']).dt.to_period('M')
-        monthly_totals = historical_data.groupby('month')['amount'].sum().reset_index()
-        
-        if len(monthly_totals) < 2:
-            return monthly_totals['amount'].iloc[-1] if not monthly_totals.empty else 0.0
+        # Group by month "YYYY-MM"
+        monthly_totals = defaultdict(float)
+        for row in historical_data:
+            dt = datetime.fromisoformat(row['date'])
+            month_key = dt.strftime("%Y-%m")
+            monthly_totals[month_key] += row['amount']
             
-        # Very simple linear regression for forecasting
-        monthly_totals['time_idx'] = range(len(monthly_totals))
-        X = monthly_totals[['time_idx']]
-        y = monthly_totals['amount']
+        months_sorted = sorted(monthly_totals.keys())
+        amounts = [monthly_totals[k] for k in months_sorted]
+        
+        if len(amounts) < 2:
+            return amounts[-1] if amounts else 0.0
+            
+        X = [[i] for i in range(len(amounts))]
+        y = amounts
         
         lr = LinearRegression()
         lr.fit(X, y)
         
-        next_month_idx = len(monthly_totals)
-        pred = lr.predict([[next_month_idx]])
-        return max(0, pred[0])
+        pred = lr.predict([[len(amounts)]])
+        return max(0.0, float(pred[0]))
         
-    def generate_insights(self, df: pd.DataFrame) -> list:
+    def generate_insights(self, df: list) -> list:
         insights = []
-        if df.empty:
+        if not df:
             return ["Add more expenses to see insights."]
             
-        df['date'] = pd.to_datetime(df['date'])
-        df = df.sort_values(by='date')
+        sorted_df = sorted(df, key=lambda x: x['date'])
         
         # 1. identifying biggest category
-        category_sums = df.groupby('category')['amount'].sum()
-        top_cat = category_sums.idxmax()
-        insights.append(f"Most of your spending is on **{top_cat}** (₹{category_sums[top_cat]:.2f}).")
+        cat_totals = defaultdict(float)
+        for expense in sorted_df:
+            cat_totals[expense['category']] += expense['amount']
+            
+        if cat_totals:
+            top_cat = max(cat_totals.items(), key=lambda x: x[1])
+            insights.append(f"Most of your spending is on **{top_cat[0]}** (₹{top_cat[1]:.2f}).")
         
         # 2. total spent
-        total = df['amount'].sum()
+        total = sum(x['amount'] for x in sorted_df)
         insights.append(f"Total spent so far gives you a baseline of ₹{total:.2f}.")
         
         # 3. Simple trend if taking diff over weeks
-        df['week'] = df['date'].dt.isocalendar().week
-        weekly = df.groupby('week')['amount'].sum()
-        if len(weekly) >= 2:
-            last_week = weekly.iloc[-2]
-            this_week = weekly.iloc[-1]
+        weekly = defaultdict(float)
+        for expense in sorted_df:
+            dt = datetime.fromisoformat(expense['date'])
+            # year and ISO week
+            week_key = f"{dt.isocalendar()[0]}-{dt.isocalendar()[1]:02d}"
+            weekly[week_key] += expense['amount']
+            
+        weeks_sorted = sorted(weekly.keys())
+        if len(weeks_sorted) >= 2:
+            last_week = weekly[weeks_sorted[-2]]
+            this_week = weekly[weeks_sorted[-1]]
             if last_week > 0:
                 pct_change = ((this_week - last_week) / last_week) * 100
                 if pct_change > 0:

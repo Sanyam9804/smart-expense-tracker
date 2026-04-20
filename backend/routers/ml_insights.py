@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-import pandas as pd
 from backend.database import get_db
 from backend import models
 from backend.auth import get_current_user
@@ -31,11 +30,10 @@ def get_insights(db: Session = Depends(get_db), current_user: models.User = Depe
     if not expenses:
         return {"predicted_next_month": 0.0, "insights": ["No expenses found. Start adding expenses to view insights."]}
     
-    # Convert to df
-    data = [{"date": e.date, "amount": e.amount, "category": e.category} for e in expenses]
-    df = pd.DataFrame(data)
+    # Convert directly to native list of dicts for Vercel efficiency (No Pandas required!)
+    data = [{"date": str(e.date), "amount": float(e.amount), "category": e.category} for e in expenses]
     
-    insights = ml_engine.generate_insights(df)
-    next_month_pred = ml_engine.predict_next_month_spending(df)
+    insights = ml_engine.generate_insights(data)
+    next_month_pred = ml_engine.predict_next_month_spending(data)
     
     return {"predicted_next_month": next_month_pred, "insights": insights}
