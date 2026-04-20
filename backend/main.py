@@ -23,11 +23,15 @@ app.include_router(auth.router)
 app.include_router(expenses.router)
 app.include_router(ml_insights.router)
 
-# Serve static files for frontend
+# Serve static files for frontend conditionally
 frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "public")
 
 @app.get("/")
 def serve_index():
-    return FileResponse(os.path.join(frontend_path, "index.html"))
+    index_path = os.path.join(frontend_path, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"status": "Vercel API is running successfully!"}
 
-app.mount("/", StaticFiles(directory=frontend_path), name="static")
+if os.path.exists(frontend_path):
+    app.mount("/", StaticFiles(directory=frontend_path), name="static")
