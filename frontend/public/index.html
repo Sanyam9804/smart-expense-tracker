@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Expense Tracker</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+    <div id="auth-container" class="page active">
+        <div class="auth-wrapper glass-panel fade-in">
+            <div class="auth-left">
+                <h1 class="gradient-text logo-large">SmartTrack</h1>
+                <p>Welcome to your personal AI-powered financial assistant. Gain full control over your money.</p>
+                <div class="auth-features">
+                    <div class="feature"><span class="icon">✨</span> Auto-Categorization</div>
+                    <div class="feature"><span class="icon">📈</span> Predictive Analytics</div>
+                    <div class="feature"><span class="icon">🛡️</span> Secure & Private</div>
+                </div>
+            </div>
+            
+            <div class="auth-right">
+                <h2 class="auth-title">Get Started</h2>
+                <p class="subtitle">Log in or create a new account</p>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+                    <button class="tab-btn" onclick="switchAuthTab('register')">Register</button>
+                </div>
+
+                <form id="auth-form" onsubmit="handleAuth(event)">
+                    <div class="input-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" placeholder="Enter your username" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" id="auth-submit-btn" class="primary-btn">Sign In</button>
+                </form>
+                <div id="auth-message" class="message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <div id="app-container" class="layout hidden">
+        
+        <aside class="sidebar glass-panel">
+            <h2 class="logo gradient-text">SmartTrack</h2>
+            <nav>
+                <a href="#" class="nav-item active" onclick="navigate('dashboard')">
+                    <span class="icon">📊</span> Dashboard
+                </a>
+                <a href="#" class="nav-item" onclick="navigate('add-expense')">
+                    <span class="icon">➕</span> Add Expense
+                </a>
+                <a href="#" class="nav-item" onclick="navigate('analytics')">
+                    <span class="icon">📈</span> Analytics
+                </a>
+            </nav>
+            <button class="logout-btn secondary-btn" onclick="logout()">
+                <span class="icon">🚪</span> Logout
+            </button>
+        </aside>
+
+        <main class="main-content">
+            <!-- Topbar showing User Info -->
+            <header class="topbar glass-panel">
+                <h3 id="current-view-title">Dashboard</h3>
+                <div class="user-profile">
+                    <span class="avatar">👤</span>
+                </div>
+            </header>
+
+            <!-- Dashboard View -->
+            <section id="dashboard-view" class="view active">
+                <div class="metrics-grid">
+                    <div class="metric-card glass-panel fade-in">
+                        <h4>Total Expenses</h4>
+                        <h2 id="total-expenses-val">₹0.00</h2>
+                    </div>
+                    <div class="metric-card glass-panel fade-in delay-1">
+                        <h4>This Month</h4>
+                        <h2 id="month-expenses-val">₹0.00</h2>
+                    </div>
+                    <div class="metric-card glass-panel fade-in delay-2">
+                        <h4>Total Transactions</h4>
+                        <h2 id="transaction-count-val">0</h2>
+                    </div>
+                </div>
+
+                <div class="recent-transactions glass-panel fade-in delay-3">
+                    <h3>Recent Transactions</h3>
+                    <table class="transaction-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Payment Mode</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Add Expense View -->
+            <section id="add-expense-view" class="view hidden">
+                <div class="add-expense-container glass-panel fade-in">
+                    <h3>Record New Expense</h3>
+                    <form id="add-expense-form" onsubmit="handleAddExpense(event)">
+                        
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="desc">Description</label>
+                                <input type="text" id="desc" placeholder="E.g., Starbucks Coffee" required>
+                                <button type="button" class="ai-btn" onclick="autoCategorize()">✨ Auto Predict Category</button>
+                            </div>
+                            <div class="input-group">
+                                <label for="amt">Amount (₹)</label>
+                                <input type="number" step="0.01" min="0" id="amt" placeholder="150.50" required>
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="cat">Category</label>
+                                <select id="cat" required>
+                                    <option value="Food & Dining">Food & Dining</option>
+                                    <option value="Groceries">Groceries</option>
+                                    <option value="Housing">Housing</option>
+                                    <option value="Transportation">Transportation</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Health">Health</option>
+                                    <option value="Utilities">Utilities</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Income">Income</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="exp-date">Date</label>
+                                <input type="date" id="exp-date" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="payment-mode">Payment Mode</label>
+                                <select id="payment-mode" required>
+                                    <option value="UPI">UPI</option>
+                                    <option value="Card">Card</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="primary-btn add-btn">Add Expense</button>
+                    </form>
+                    <div id="add-expense-msg" class="message"></div>
+                </div>
+            </section>
+
+            <!-- Analytics View -->
+            <section id="analytics-view" class="view hidden">
+                <div class="ai-insights glass-panel fade-in">
+                    <div class="insights-header">
+                        <h3>🧠 AI Insights & Forecasting</h3>
+                        <div class="predict-badge">Next Month Forecast: <strong id="next-month-pred">₹0.00</strong></div>
+                    </div>
+                    <ul id="insights-list" class="insights-list">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-container glass-panel fade-in delay-1">
+                        <h4>Category Breakdown</h4>
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                    <div class="chart-container glass-panel fade-in delay-2">
+                        <h4>Spending Trend</h4>
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
