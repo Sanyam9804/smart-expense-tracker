@@ -1,27 +1,30 @@
-import joblib
 import os
 from datetime import datetime
 from collections import defaultdict
-from sklearn.linear_model import LinearRegression
-
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "model.pkl")
 
 class ExpenseML:
     def __init__(self):
-        self.model = None
-        self.load_model()
+        pass
         
-    def load_model(self):
-        if os.path.exists(MODEL_PATH):
-            self.model = joblib.load(MODEL_PATH)
-        else:
-            self.model = None
-            
     def predict_category(self, description: str) -> str:
-        if self.model is None:
-            return "Other"
-        prediction = self.model.predict([description])
-        return prediction[0]
+        desc = description.lower()
+        if any(word in desc for word in ['coffee', 'starbucks', 'dinner', 'lunch', 'food', 'market']):
+            return 'Food & Dining'
+        if any(word in desc for word in ['grocery', 'whole foods', 'walmart', 'supermarket']):
+            return 'Groceries'
+        if any(word in desc for word in ['rent', 'mortgage', 'apartment']):
+            return 'Housing'
+        if any(word in desc for word in ['uber', 'gas', 'transit', 'car', 'ride']):
+            return 'Transportation'
+        if any(word in desc for word in ['netflix', 'spotify', 'movie', 'game', 'gym']):
+            return 'Entertainment'
+        if any(word in desc for word in ['doctor', 'pharmacy', 'hospital', 'medicine']):
+            return 'Health'
+        if any(word in desc for word in ['electric', 'water', 'internet', 'bill']):
+            return 'Utilities'
+        if any(word in desc for word in ['amazon', 'clothes', 'shoe', 'shopping']):
+            return 'Shopping'
+        return "Other"
         
     def predict_next_month_spending(self, historical_data: list):
         if not historical_data or len(historical_data) < 2:
@@ -40,14 +43,12 @@ class ExpenseML:
         if len(amounts) < 2:
             return amounts[-1] if amounts else 0.0
             
-        X = [[i] for i in range(len(amounts))]
-        y = amounts
-        
-        lr = LinearRegression()
-        lr.fit(X, y)
-        
-        pred = lr.predict([[len(amounts)]])
-        return max(0.0, float(pred[0]))
+        if len(amounts) < 2:
+            return amounts[-1] if amounts else 0.0
+            
+        # Simple moving average heuristic instead of sklearn Linear Regression
+        avg_increase = (amounts[-1] - amounts[0]) / len(amounts)
+        return max(0.0, amounts[-1] + avg_increase)
         
     def generate_insights(self, df: list) -> list:
         insights = []
